@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+src/secondbrain/__init__.py
+src/secondbrain/cli.py
+src/secondbrain/core.py
+src/secondbrain/mcp_server.py
+src/secondbrain.egg-info/PKG-INFO
+src/secondbrain.egg-info/SOURCES.txt
+src/secondbrain.egg-info/dependency_links.txt
+src/secondbrain.egg-info/entry_points.txt
+src/secondbrain.egg-info/top_level.txt
+tests/test_core.py

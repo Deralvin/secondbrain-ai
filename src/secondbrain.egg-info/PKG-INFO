@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: secondbrain
+Version: 0.1.0
+Summary: Local-first cross-project work memory for coding agents
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+
+# Second Brain
+
+Local-first shared memory for work across HRM, CRM, Inventory, and other projects. It is usable globally without opening this repository after installation.

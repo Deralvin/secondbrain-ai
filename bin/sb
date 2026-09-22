@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# sb — wrapper untuk agent apapun dengan Second Brain context + auto-capture.
+# Usage:
+#   sb claude [args...]     # jalankan claude dengan context, capture setelahnya
+#   sb opencode [args...]   # sama untuk opencode
+#   sb hermes [args...]     # sama untuk hermes
+#   sb wrap "perintah bebas"  # wrap perintah lain
+
+set -euo pipefail
+
+AGENT_BIN=""
+PASSTHROUGH=()
+
+if [ $# -eq 0 ]; then
+  echo "usage: sb claude|opencode|hermes|wrap \"command\" [args...]"
+  exit 1
+fi
+
+MODE="$1"; shift
+
+case "$MODE" in
+  claude)   AGENT_BIN="$(command -v claude || true)"; AGENT_NAME="claude-code" ;;
+  opencode) AGENT_BIN="$(command -v opencode || true)"; AGENT_NAME="opencode" ;;
+  hermes)   AGENT_BIN="$(command -v hermes || true)"; AGENT_NAME="hermes" ;;
+  wrap)     AGENT_BIN=""; AGENT_NAME="manual" ;;
+  *)        AGENT_BIN="$MODE"; AGENT_NAME="manual" ;;
+esac
+
+# 1. Tampilkan context sebelum bekerja (agent anda juga bisa memanggil CLI sendiri)
+echo "── Second Brain context ──────────────────────────"
+secondbrain context || true
+echo "──────────────────────────────────────────────────"
+
+# 2. Jalankan agent dengan argumen aslinya
+STATUS=0
+if [ "$MODE" = "wrap" ]; then
+  "$@" || STATUS=$?
+elif [ -n "$AGENT_BIN" ]; then
+  "$AGENT_BIN" "$@" || STATUS=$?
+else
+  echo "agent not found: $MODE" >&2
+  exit 127
+fi
+
+# 3. Auto-capture hasil kerja dari git, even if the agent failed, because a
+#    failed attempt can still contain a useful commit or repository state.
+secondbrain auto-capture --agent "$AGENT_NAME" || true
+
+exit $STATUS
