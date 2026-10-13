@@ -76,9 +76,7 @@ export default async function ProjectPage({ params }: Props) {
       </section>
 
       <section className="project-graph">
-        <div className="card graph-card">
-          <GraphCanvas nodes={graph.nodes} links={graph.links} project={decoded} />
-        </div>
+        <GraphCanvas nodes={graph.nodes} links={graph.links} project={decoded} />
       </section>
 
       <section className="project-content">
