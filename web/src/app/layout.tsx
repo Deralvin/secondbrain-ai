@@ -14,7 +14,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="shell-header">
           <div className="header-inner">
             <Link href="/" className="brand"><span className="brand-mark">✦</span>Second Brain</Link>
-            <nav className="nav"><Link href="/">Dashboard</Link><Link href="/graph">Knowledge Graph</Link></nav>
+            <nav className="nav">
+              <Link href="/">Dashboard</Link>
+              <Link href="/graph">Knowledge Graph</Link>
+              <Link href="/memory/new" className="nav-new-btn">+ New Memory</Link>
+            </nav>
           </div>
         </header>
         {children}

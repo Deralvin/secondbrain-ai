@@ -29,11 +29,41 @@ export type GraphNode = {
   memory?: Memory;
 };
 
-export type GraphLink = { source: string; target: string; kind: string };
-export type MemoryRelation = { from_id: string; to_id: string; kind: string };
+export type GraphLink = {
+  source: string;
+  target: string;
+  kind: string;
+  is_relation?: boolean;
+};
+export type MemoryRelation = {
+  from_id: string;
+  to_id: string;
+  kind: string;
+  direction?: "outgoing" | "incoming";
+};
 export type MemoryDetail = Memory & { relations?: MemoryRelation[] };
 
-export type BridgeAction = "memories" | "projects" | "stats" | "graph" | "memory";
+export type BridgeAction = "memories" | "projects" | "stats" | "graph" | "memory" | "create_memory" | "update_memory" | "delete_memory";
+
+export type CreateMemoryInput = {
+  title: string;
+  content: string;
+  project: string;
+  type?: string;
+  tags?: string[];
+  files?: string[];
+  agent?: string;
+};
+
+export type UpdateMemoryInput = {
+  id: string;
+  title?: string;
+  content?: string;
+  project?: string;
+  type?: string;
+  tags?: string[];
+  files?: string[];
+};
 
 const python = process.env.SECONDBRAIN_PYTHON ?? "/usr/bin/python3";
 
@@ -86,6 +116,18 @@ export function getGraph(): { nodes: GraphNode[]; links: GraphLink[] } {
 
 export function getMemory(id: string): MemoryDetail | null {
   return runBridge<MemoryDetail | null>("memory", { id });
+}
+
+export function createMemory(input: CreateMemoryInput): { id: string; success: boolean } {
+  return runBridge<{ id: string; success: boolean }>("create_memory", input);
+}
+
+export function updateMemory(input: UpdateMemoryInput): { memory: MemoryDetail; success: boolean } {
+  return runBridge<{ memory: MemoryDetail; success: boolean }>("update_memory", input);
+}
+
+export function deleteMemory(id: string): { id: string; success: boolean } {
+  return runBridge<{ id: string; success: boolean }>("delete_memory", { id });
 }
 
 export function getDatabasePath() {

@@ -20,7 +20,10 @@ export default function DashboardPage() {
           <h1>Work, remembered.</h1>
           <p className="lead">Satu ruang untuk melihat keputusan, solusi, dan pola yang Anda temukan di HRM, CRM, Inventory, dan seluruh project lain.</p>
         </div>
-        <Link className="button" href="/graph">Explore graph <span>↗</span></Link>
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <Link className="button button-primary" href="/memory/new">+ New Memory</Link>
+          <Link className="button" href="/graph">Explore graph <span>↗</span></Link>
+        </div>
       </div>
 
       <section className="stats">

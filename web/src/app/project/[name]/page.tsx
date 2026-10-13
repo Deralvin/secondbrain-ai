@@ -49,15 +49,23 @@ export default async function ProjectPage({ params }: Props) {
 
   return (
     <main className="main">
-      <div className="page-heading">
-        <div className="eyebrow">Project detail</div>
-        <h1>{project.name}</h1>
-        {project.git_remote && (
-          <div className="project-remote">{project.git_remote}</div>
-        )}
-        <div className="project-created">
-          Dibuat {formatDate(project.created_at)}
+      <div className="page-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+        <div>
+          <div className="eyebrow">Project detail</div>
+          <h1>{project.name}</h1>
+          {project.git_remote && (
+            <div className="project-remote">{project.git_remote}</div>
+          )}
+          <div className="project-created">
+            Dibuat {formatDate(project.created_at)}
+          </div>
         </div>
+        <Link
+          className="button button-primary"
+          href={`/memory/new?project=${encodeURIComponent(decoded)}`}
+        >
+          + Capture Memory
+        </Link>
       </div>
 
       <section className="project-stats">

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getMemory } from "@/lib/db";
-import CopyButton from "./CopyButton";
+import { getMemory, getProjects, getStats } from "@/lib/db";
+import MemoryActions from "./MemoryActions";
 
 export const dynamic = "force-dynamic";
 
@@ -144,6 +144,9 @@ export default async function MemoryDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const projects = getProjects();
+  const stats = getStats();
+
   return (
     <main className="main">
       {/* Breadcrumb Navigation */}
@@ -184,22 +187,11 @@ export default async function MemoryDetailPage({ params }: PageProps) {
         <h1 className="memory-page-title">{memory.title}</h1>
 
         {/* Action Toolbar */}
-        <div className="memory-toolbar">
-          <CopyButton
-            text={memory.content}
-            label="Copy Solution"
-            className="button button-primary"
-          />
-          <Link
-            href={`/project/${encodeURIComponent(memory.project)}`}
-            className="button"
-          >
-            📂 View Project
-          </Link>
-          <Link href="/graph" className="button">
-            🌐 View in 3D Graph ↗
-          </Link>
-        </div>
+        <MemoryActions
+          memory={memory}
+          existingProjects={projects}
+          suggestedTags={stats.tags}
+        />
       </div>
 
       {/* Main Content Layout */}

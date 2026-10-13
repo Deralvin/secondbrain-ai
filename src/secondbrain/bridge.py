@@ -36,9 +36,64 @@ def main():
                 tag_id = f"tag:{tag}"
                 add({"id": tag_id, "label": tag, "type": "tag"})
                 links.append({"source": memory_id, "target": tag_id, "kind": "tagged"})
+
+        # Fetch memory-to-memory relations
+        raw_relations = brain.conn.execute(
+            "SELECT from_id, to_id, kind FROM relations"
+        ).fetchall()
+        rel_map = {}
+        for r in raw_relations:
+            f, t, k = r["from_id"], r["to_id"], r["kind"]
+            rel_map.setdefault(f, []).append({"from_id": f, "to_id": t, "kind": k, "direction": "outgoing"})
+            rel_map.setdefault(t, []).append({"from_id": f, "to_id": t, "kind": k, "direction": "incoming"})
+
+        for node in nodes:
+            if node["type"] == "memory" and node.get("memory"):
+                node["memory"]["relations"] = rel_map.get(node["memory"]["id"], [])
+
+        for r in raw_relations:
+            source_id = f"memory:{r['from_id']}"
+            target_id = f"memory:{r['to_id']}"
+            if source_id in seen and target_id in seen:
+                links.append({
+                    "source": source_id,
+                    "target": target_id,
+                    "kind": r["kind"],
+                    "is_relation": True,
+                })
+
         result = {"nodes": nodes, "links": links}
     elif action == "memory":
         result = brain.show(request.get("id"))
+    elif action == "create_memory":
+        mid = brain.capture(
+            title=request["title"],
+            content=request["content"],
+            project=request["project"],
+            type=request.get("type", "note"),
+            tags=request.get("tags", []),
+            files=request.get("files", []),
+            agent=request.get("agent", "manual"),
+        )
+        result = {"id": mid, "success": True}
+    elif action == "update_memory":
+        updated = brain.update(
+            mid=request["id"],
+            title=request.get("title"),
+            content=request.get("content"),
+            type=request.get("type"),
+            tags=request.get("tags"),
+            files=request.get("files"),
+            project=request.get("project"),
+        )
+        if not updated:
+            raise ValueError(f"memory not found: {request.get('id')}")
+        result = {"memory": updated, "success": True}
+    elif action == "delete_memory":
+        ok = brain.delete(request["id"])
+        if not ok:
+            raise ValueError(f"memory not found: {request.get('id')}")
+        result = {"id": request["id"], "success": True}
     else:
         raise ValueError(f"unknown action: {action}")
     print(json.dumps(result, ensure_ascii=False))

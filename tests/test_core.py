@@ -232,3 +232,17 @@ def test_stats_counts(brain):
     assert s["memories"] == 2
     assert s["projects"] == 2
     assert s["tags"]["flutter"] == 2
+
+
+def test_update_and_delete_memory(brain):
+    mid = brain.capture(title="original title", content="secret api_key=sk-123456789", project="hrm-apps", tags=["tag1"])
+    # test update
+    updated = brain.update(mid, title="new title", tags=["tag1", "tag2"], content="updated content")
+    assert updated["title"] == "new title"
+    assert "tag2" in updated["tags"]
+    assert updated["content"] == "updated content"
+    # test delete
+    assert brain.delete(mid) is True
+    assert brain.show(mid) is None
+    assert brain.delete(mid) is False
+

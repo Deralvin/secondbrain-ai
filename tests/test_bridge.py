@@ -47,3 +47,27 @@ def test_bridge_graph(tmp_path):
     assert "agent:claude-code" in ids
     assert any(n["id"].startswith("memory:") for n in out["nodes"])
     assert len(out["links"]) == 3
+
+
+def test_bridge_graph_with_relations(tmp_path):
+    home = tmp_path / "brain"
+    from secondbrain.core import Brain
+    b = Brain(home=str(home))
+    m1 = b.capture(title="Mem 1", content="c1", project="p1")
+    m2 = b.capture(title="Mem 2", content="c2", project="p1")
+    b.link(m1, m2, kind="reuses_pattern")
+    out = _bridge({"action": "graph"}, str(home))
+
+    # Check relation link
+    rel_links = [l for l in out["links"] if l.get("is_relation")]
+    assert len(rel_links) == 1
+    assert rel_links[0]["source"] == f"memory:{m1}"
+    assert rel_links[0]["target"] == f"memory:{m2}"
+    assert rel_links[0]["kind"] == "reuses_pattern"
+
+    # Check memory node has relations attached
+    mem1_node = next(n for n in out["nodes"] if n["id"] == f"memory:{m1}")
+    assert len(mem1_node["memory"]["relations"]) == 1
+    assert mem1_node["memory"]["relations"][0]["kind"] == "reuses_pattern"
+    assert mem1_node["memory"]["relations"][0]["direction"] == "outgoing"
+

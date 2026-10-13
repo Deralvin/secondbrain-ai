@@ -9,9 +9,9 @@ Dokumentasi tiket pengembangan (*engineering backlog*) untuk evolusi Second Brai
 | ID | Judul Tiket | Kategori | Prioritas | Estimasi | Status |
 |---|---|---|---|---|---|
 | **SB-01** | Halaman Detail Memori (`/memory/[id]`) & Copy Snippet | Web UI | **P1 (Tinggi)** | M (3 SP) | ✅ Done |
-| **SB-02** | Form Capture & Buat Memori Baru dari Web UI | Web UI / Bridge | **P1 (Tinggi)** | M (3 SP) | 📝 Ready |
-| **SB-03** | Edit, Retag, & Delete / Archive Memori | Web UI / Core | **P2 (Sedang)** | S (2 SP) | 📝 Ready |
-| **SB-04** | Visualisasi Relasi Antar-Memori di 3D Graph (`relations` table) | 3D Graph / Core | **P2 (Sedang)** | M (3 SP) | 📝 Ready |
+| **SB-02** | Form Capture & Buat Memori Baru dari Web UI | Web UI / Bridge | **P1 (Tinggi)** | M (3 SP) | ✅ Done |
+| **SB-03** | Edit, Retag, & Delete / Archive Memori | Web UI / Core | **P2 (Sedang)** | S (2 SP) | ✅ Done |
+| **SB-04** | Visualisasi Relasi Antar-Memori di 3D Graph (`relations` table) | 3D Graph / Core | **P2 (Sedang)** | M (3 SP) | ✅ Done |
 | **SB-05** | Hybrid Semantic Search (Vector Embedding + Full-Text) | AI Core / Search | **P1 (Tinggi)** | L (5 SP) | 📝 Ready |
 | **SB-06** | "Ask Second Brain" AI Chat Tab (RAG Q&A Assistant) | AI / Web UI | **P2 (Sedang)** | L (5 SP) | 📝 Ready |
 | **SB-07** | Multi-Device Sync & Encrypted Backup (`secondbrain sync`) | CLI / Infra | **P3 (Rendah)** | M (3 SP) | 📝 Ready |
@@ -44,19 +44,20 @@ Dokumentasi tiket pengembangan (*engineering backlog*) untuk evolusi Second Brai
 ### [SB-02] Form Capture & Buat Memori Baru dari Web UI
 - **Tipe**: Feature / Full-Stack
 - **Prioritas**: P1 (Tinggi)
+- **Status**: ✅ Selesai
 - **Deskripsi**: Memungkinkan pengguna mencatat memori/solusi secara manual langsung dari browser tanpa harus membuka terminal atau menjalankan CLI.
 - **Kriteria Penerimaan (Acceptance Criteria)**:
-  - [ ] Tombol Floating Action Button (FAB) `+ New Memory` di navigasi utama atau dashboard.
-  - [ ] Modal dialog atau halaman `/memory/new` dengan input form:
-    - Judul (*required*)
-    - Project dropdown (pilih project yang ada atau ketik project baru)
-    - Tipe (*bug_fix, feature, arch, note*)
-    - Konten / Solusi (Markdown textarea)
-    - Tags (input chip dengan auto-complete dari tag populer)
-    - Files terlampir (opsional)
-  - [ ] Validasi secret redaction tetap aktif (menjaga token/kunci API ter-redact).
-  - [ ] Endpoint API `/api/memories` (POST) yang memanggil bridge Python untuk menyimpan ke SQLite.
-  - [ ] Notifikasi sukses dan auto-redirect ke halaman detail memori baru.
+  - [x] Tombol Floating Action Button (FAB) `+ New Memory` di navigasi utama atau dashboard.
+  - [x] Modal dialog atau halaman `/memory/new` dengan input form:
+    - [x] Judul (*required*)
+    - [x] Project dropdown (pilih project yang ada atau ketik project baru)
+    - [x] Tipe (*bug_fix, feature, arch, note, work_session*)
+    - [x] Konten / Solusi (Markdown textarea dengan tombol template dan live preview)
+    - [x] Tags (input chip dengan auto-complete dari tag populer)
+    - [x] Files terlampir (opsional)
+  - [x] Validasi secret redaction tetap aktif (menjaga token/kunci API ter-redact).
+  - [x] Endpoint API `/api/memories` (POST) yang memanggil bridge Python untuk menyimpan ke SQLite.
+  - [x] Notifikasi sukses dan auto-redirect ke halaman detail memori baru.
 - **File Terdampak**:
   - `web/src/app/memory/new/page.tsx` atau modal component
   - `web/src/app/api/memories/route.ts` (POST handler)
@@ -67,16 +68,20 @@ Dokumentasi tiket pengembangan (*engineering backlog*) untuk evolusi Second Brai
 ### [SB-03] Edit, Retag, & Delete / Archive Memori
 - **Tipe**: Enhancement
 - **Prioritas**: P2 (Sedang)
+- **Status**: ✅ Selesai
 - **Deskripsi**: Kemampuan untuk memperbaiki typo, memperbarui tag, atau menghapus/mengarsipkan memori yang sudah usang dari dashboard web.
 - **Kriteria Penerimaan (Acceptance Criteria)**:
-  - [ ] Tombol "Edit" di halaman detail memori untuk memperbarui judul, konten, dan tags.
-  - [ ] Tombol "Delete" dengan dialog konfirmasi keamanan (*destructive action prompt*).
-  - [ ] Penghapusan juga membersihkan data di relasi tabel `relations` untuk mencegah *orphan records*.
-  - [ ] Penambahan endpoint DELETE dan PUT di API route.
+  - [x] Tombol "Edit" di halaman detail memori untuk memperbarui judul, konten, dan tags.
+  - [x] Tombol "Delete" dengan dialog konfirmasi keamanan (*destructive action prompt*).
+  - [x] Penghapusan juga membersihkan data di relasi tabel `relations` untuk mencegah *orphan records*.
+  - [x] Penambahan endpoint DELETE dan PUT di API route.
 - **File Terdampak**:
-  - `src/secondbrain/core.py` (tambah method `delete_memory`, `update_memory`)
-  - `src/secondbrain/bridge.py`
-  - `web/src/app/api/memories/[id]/route.ts`
+  - `src/secondbrain/core.py` (method `update`, `delete`)
+  - `src/secondbrain/bridge.py` (action `update_memory`, `delete_memory`)
+  - `web/src/lib/db.ts` (helper `updateMemory`, `deleteMemory`)
+  - `web/src/app/api/memories/[id]/route.ts` (PUT & DELETE handlers)
+  - `web/src/app/memory/[id]/MemoryActions.tsx` (Edit modal & Delete confirmation dialog)
+  - `web/src/app/globals.css` (modal, danger button, and animation styles)
 
 ---
 
@@ -85,15 +90,19 @@ Dokumentasi tiket pengembangan (*engineering backlog*) untuk evolusi Second Brai
 ### [SB-04] Visualisasi Relasi Antar-Memori di 3D Graph (`relations` table)
 - **Tipe**: Feature / 3D Visualization
 - **Prioritas**: P2 (Sedang)
+- **Status**: ✅ Selesai
 - **Deskripsi**: Database sudah memiliki tabel `relations` (`from_id`, `to_id`, `kind: reuses_pattern / depends_on / supersedes`) via perintah `secondbrain link`. Saat ini, garis link di 3D graph baru memetakan memory-to-project, memory-to-tag, dan memory-to-agent. Relasi antar-memori belum divisualisasikan.
 - **Kriteria Penerimaan (Acceptance Criteria)**:
-  - [ ] Bridge `action: graph` menyertakan link antar-memori dari tabel `relations`.
-  - [ ] Garis relasi antar-memori di-render dengan gaya garis khusus di Three.js (misal: garis putus-putus atau warna emas neon `#f59e0b` untuk `reuses_pattern`).
-  - [ ] Inspector Drawer menampilkan daftar relasi langsung: *"Reuses pattern from: [Memory Title]"* atau *"Depended on by: [Memory Title]"* yang dapat diklik untuk melompat kamera.
-  - [ ] Filter toggle di toolbar: *"Show Memory-to-Memory Links"*.
+  - [x] Bridge `action: graph` menyertakan link antar-memori dari tabel `relations`.
+  - [x] Garis relasi antar-memori di-render dengan gaya garis khusus di Three.js (warna neon: emas `#f59e0b` untuk `reuses_pattern`, magenta `#ec4899` untuk `depends_on`, ungu `#a855f7` untuk `supersedes`).
+  - [x] Inspector Drawer menampilkan daftar relasi langsung: *"Reuses pattern from: [Memory Title]"* atau *"Depended on by: [Memory Title]"* yang dapat diklik untuk melompat kamera.
+  - [x] Filter toggle di toolbar: *"Show Memory-to-Memory Links"*.
 - **File Terdampak**:
-  - `src/secondbrain/bridge.py` (query tabel `relations`)
-  - `web/src/app/graph/GraphCanvas.tsx` (tambahkan visual link styling & packet styling)
+  - `src/secondbrain/bridge.py` (query tabel `relations` dan enrich memory nodes)
+  - `tests/test_bridge.py` (unit test relasi graf)
+  - `web/src/lib/db.ts` (update tipe `GraphLink` & `MemoryRelation`)
+  - `web/src/app/graph/GraphCanvas.tsx` (visual link, packet colors, toggle controls, inspector relations list)
+  - `web/src/app/globals.css` (styling kartu relasi, pills, dan animasi)
 
 ---
 

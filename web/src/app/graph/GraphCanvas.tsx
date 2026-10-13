@@ -21,6 +21,64 @@ const TYPE_COLORS: Record<NodeType, { hex: number; str: string; glow: string }> 
   agent: { hex: 0xfbbf24, str: "#fbbf24", glow: "rgba(251, 191, 36, 0.45)" },
 };
 
+const RELATION_CONFIGS: Record<
+  string,
+  {
+    hex: number;
+    str: string;
+    glow: string;
+    label: string;
+    outgoingText: string;
+    incomingText: string;
+  }
+> = {
+  reuses_pattern: {
+    hex: 0xf59e0b,
+    str: "#f59e0b",
+    glow: "rgba(245, 158, 11, 0.45)",
+    label: "Reuses Pattern",
+    outgoingText: "Reuses pattern from",
+    incomingText: "Pattern reused by",
+  },
+  depends_on: {
+    hex: 0xec4899,
+    str: "#ec4899",
+    glow: "rgba(236, 72, 153, 0.45)",
+    label: "Depends On",
+    outgoingText: "Depends on",
+    incomingText: "Depended on by",
+  },
+  supersedes: {
+    hex: 0xa855f7,
+    str: "#a855f7",
+    glow: "rgba(168, 85, 247, 0.45)",
+    label: "Supersedes",
+    outgoingText: "Supersedes",
+    incomingText: "Superseded by",
+  },
+  related: {
+    hex: 0x06b6d4,
+    str: "#06b6d4",
+    glow: "rgba(6, 182, 212, 0.45)",
+    label: "Related",
+    outgoingText: "Related to",
+    incomingText: "Related from",
+  },
+};
+
+function getRelationConfig(kind: string) {
+  return (
+    RELATION_CONFIGS[kind] ?? {
+      hex: 0xf59e0b,
+      str: "#f59e0b",
+      glow: "rgba(245, 158, 11, 0.45)",
+      label: kind,
+      outgoingText: `Linked (${kind}) to`,
+      incomingText: `Linked (${kind}) from`,
+    }
+  );
+}
+
 type Vec3 = { x: number; y: number; z: number };
 
 // Deterministic hash for positioning
@@ -122,6 +180,8 @@ interface PulsePacket {
   speed: number;
   sourceId: string;
   targetId: string;
+  isRelation?: boolean;
+  kind?: string;
 }
 
 export default function GraphCanvas({ nodes, links, project }: Props) {
@@ -136,7 +196,25 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>("galaxy");
   const [autoRotate, setAutoRotate] = useState(true);
   const [showPulses, setShowPulses] = useState(true);
+  const [showRelationLinks, setShowRelationLinks] = useState(true);
+  const [relationsOnlyFilter, setRelationsOnlyFilter] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Stats for relation links
+  const relationLinksCount = useMemo(() => {
+    return links.filter((l) => l.is_relation).length;
+  }, [links]);
+
+  const relatedMemoryIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const l of links) {
+      if (l.is_relation) {
+        ids.add(l.source);
+        ids.add(l.target);
+      }
+    }
+    return ids;
+  }, [links]);
 
   // Scoped nodes for specific project if prop is provided
   const scopedNodes = useMemo(() => {
@@ -163,11 +241,14 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
     return Array.from(keep.values());
   }, [nodes, links, project]);
 
-  // Filtered by search and active type filter
+  // Filtered by search, type, and relation filter
   const visibleNodes = useMemo(() => {
     let result = scopedNodes;
     if (activeFilter !== "all") {
       result = result.filter((n) => n.type === activeFilter);
+    }
+    if (relationsOnlyFilter) {
+      result = result.filter((n) => relatedMemoryIds.has(n.id));
     }
     const q = searchQuery.trim().toLowerCase();
     if (q) {
@@ -180,13 +261,17 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
       );
     }
     return result;
-  }, [scopedNodes, activeFilter, searchQuery]);
+  }, [scopedNodes, activeFilter, relationsOnlyFilter, relatedMemoryIds, searchQuery]);
 
-  // Relevant links for visible nodes
+  // Relevant links for visible nodes (respecting showRelationLinks toggle)
   const visibleLinks = useMemo(() => {
     const ids = new Set(visibleNodes.map((n) => n.id));
-    return links.filter((l) => ids.has(l.source) && ids.has(l.target));
-  }, [visibleNodes, links]);
+    return links.filter((l) => {
+      if (!ids.has(l.source) || !ids.has(l.target)) return false;
+      if (l.is_relation && !showRelationLinks) return false;
+      return true;
+    });
+  }, [visibleNodes, links, showRelationLinks]);
 
   // Stats count
   const typeCounts = useMemo(() => {
@@ -215,6 +300,49 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
     const neighborIds = adjacency.get(selectedNode.id) ?? new Set();
     return nodes.filter((n) => neighborIds.has(n.id));
   }, [selectedNode, adjacency, nodes]);
+
+  // Memory-to-memory relations for selectedNode
+  const selectedNodeRelations = useMemo(() => {
+    if (!selectedNode || selectedNode.type !== "memory") return [];
+    const nodeMap = new Map<string, GraphNode>();
+    for (const n of nodes) nodeMap.set(n.id, n);
+
+    const rels: {
+      otherNode?: GraphNode;
+      otherMemoryId: string;
+      kind: string;
+      direction: "outgoing" | "incoming";
+      relationText: string;
+    }[] = [];
+
+    for (const l of links) {
+      if (!l.is_relation) continue;
+      if (l.source === selectedNode.id) {
+        const targetMemoryId = l.target.replace(/^memory:/, "");
+        const targetNode = nodeMap.get(l.target);
+        const conf = getRelationConfig(l.kind);
+        rels.push({
+          otherNode: targetNode,
+          otherMemoryId: targetMemoryId,
+          kind: l.kind,
+          direction: "outgoing",
+          relationText: conf.outgoingText,
+        });
+      } else if (l.target === selectedNode.id) {
+        const sourceMemoryId = l.source.replace(/^memory:/, "");
+        const sourceNode = nodeMap.get(l.source);
+        const conf = getRelationConfig(l.kind);
+        rels.push({
+          otherNode: sourceNode,
+          otherMemoryId: sourceMemoryId,
+          kind: l.kind,
+          direction: "incoming",
+          relationText: conf.incomingText,
+        });
+      }
+    }
+    return rels;
+  }, [selectedNode, links, nodes]);
 
   // References for Three.js engine
   const threeRef = useRef<{
@@ -571,11 +699,20 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
               positions[i * 3 + 1] = py;
               positions[i * 3 + 2] = pz;
 
-              const c = TYPE_COLORS[tgt.node.type] ?? TYPE_COLORS.memory;
-              const colorObj = new THREE.Color(c.hex);
-              colors[i * 3] = colorObj.r;
-              colors[i * 3 + 1] = colorObj.g;
-              colors[i * 3 + 2] = colorObj.b;
+              let colorObj: THREE.Color;
+              if (p.isRelation) {
+                const relConf = getRelationConfig(p.kind || "reuses_pattern");
+                colorObj = new THREE.Color(relConf.hex);
+                colors[i * 3] = colorObj.r * 2.0;
+                colors[i * 3 + 1] = colorObj.g * 2.0;
+                colors[i * 3 + 2] = colorObj.b * 2.0;
+              } else {
+                const c = TYPE_COLORS[tgt.node.type] ?? TYPE_COLORS.memory;
+                colorObj = new THREE.Color(c.hex);
+                colors[i * 3] = colorObj.r;
+                colors[i * 3 + 1] = colorObj.g;
+                colors[i * 3 + 2] = colorObj.b;
+              }
             }
           }
           sys.pulsesMesh.geometry.attributes.position.needsUpdate = true;
@@ -644,7 +781,24 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
       const isConnectedToFocus =
         focusId && (link.source === focusId || link.target === focusId);
 
-      if (isConnectedToFocus) {
+      if (link.is_relation) {
+        // Special render for memory-to-memory relations (SB-04)
+        const relConf = getRelationConfig(link.kind);
+        const relCol = new THREE.Color(relConf.hex);
+        if (isConnectedToFocus) {
+          // Extra bright focused glow for relation
+          lineColors.push(relCol.r * 2.2, relCol.g * 2.2, relCol.b * 2.2);
+          lineColors.push(relCol.r * 2.2, relCol.g * 2.2, relCol.b * 2.2);
+        } else if (focusId) {
+          // Dim connection when another node is focused
+          lineColors.push(relCol.r * 0.3, relCol.g * 0.3, relCol.b * 0.3);
+          lineColors.push(relCol.r * 0.3, relCol.g * 0.3, relCol.b * 0.3);
+        } else {
+          // Vibrant glowing relation line
+          lineColors.push(relCol.r * 1.3, relCol.g * 1.3, relCol.b * 1.3);
+          lineColors.push(relCol.r * 1.3, relCol.g * 1.3, relCol.b * 1.3);
+        }
+      } else if (isConnectedToFocus) {
         // Bright radiant glowing connection
         const c1 = new THREE.Color(TYPE_COLORS[src.node.type].hex);
         const c2 = new THREE.Color(TYPE_COLORS[tgt.node.type].hex);
@@ -803,6 +957,8 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
         speed: 0.25 + ((idx % 5) * 0.08),
         sourceId: link.source,
         targetId: link.target,
+        isRelation: link.is_relation,
+        kind: link.kind,
       });
     });
     sys.pulsesData = pulsePackets;
@@ -982,6 +1138,23 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
             <i className="dot" style={{ background: TYPE_COLORS.agent.str }} />
             Agents <span className="filter-count">{typeCounts.agent}</span>
           </button>
+          <button
+            className={`filter-chip ${relationsOnlyFilter ? "active" : ""}`}
+            onClick={() => setRelationsOnlyFilter(!relationsOnlyFilter)}
+            title="Filter graph to memories with linked relations"
+            style={
+              relationsOnlyFilter
+                ? {
+                    borderColor: "#f59e0b",
+                    color: "#f59e0b",
+                    background: "rgba(245, 158, 11, 0.15)",
+                  }
+                : {}
+            }
+          >
+            <i className="dot" style={{ background: "#f59e0b" }} />
+            Relations <span className="filter-count">{relationLinksCount}</span>
+          </button>
         </div>
       </div>
 
@@ -1041,6 +1214,20 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
             <span>⚡ Pulses</span>
           </button>
 
+          {/* Memory Relations Toggle (SB-04) */}
+          <button
+            className={`hud-btn ${showRelationLinks ? "active" : ""}`}
+            title="Toggle Memory-to-Memory Relation Lines"
+            onClick={() => setShowRelationLinks(!showRelationLinks)}
+            style={
+              showRelationLinks && relationLinksCount > 0
+                ? { borderColor: "rgba(245, 158, 11, 0.5)", color: "#f59e0b" }
+                : {}
+            }
+          >
+            <span>{showRelationLinks ? "🔗 Rel: On" : "🔗 Rel: Off"}</span>
+          </button>
+
           {/* Center / Reset View */}
           <button
             className="hud-btn"
@@ -1073,6 +1260,9 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
           </span>
           <span className="legend-item">
             <i className="dot" style={{ background: TYPE_COLORS.agent.str }} /> Agent
+          </span>
+          <span className="legend-item">
+            <i className="dot" style={{ background: "#f59e0b" }} /> Relation
           </span>
         </div>
 
@@ -1163,6 +1353,73 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
                   )}
                 </div>
               </>
+            )}
+
+            {/* Memory Relations (SB-04) */}
+            {selectedNodeRelations.length > 0 && (
+              <div className="inspector-relations-section">
+                <div className="inspector-section-label">
+                  🔗 Linked Memory Relations ({selectedNodeRelations.length})
+                </div>
+                <div className="inspector-relations-list">
+                  {selectedNodeRelations.map((rel, idx) => {
+                    const conf = getRelationConfig(rel.kind);
+                    return (
+                      <div key={idx} className="inspector-relation-card">
+                        <div className="inspector-relation-header">
+                          <span
+                            className="relation-pill"
+                            style={{
+                              borderColor: conf.str,
+                              color: conf.str,
+                              background: conf.glow,
+                            }}
+                          >
+                            {rel.direction === "outgoing" ? "↗" : "↙"} {rel.relationText}
+                          </span>
+                        </div>
+                        <div className="inspector-relation-body">
+                          <button
+                            type="button"
+                            className="inspector-relation-title-btn"
+                            onClick={() => {
+                              if (rel.otherNode) {
+                                setSelectedNode(rel.otherNode);
+                                focusNodeIn3D(rel.otherNode);
+                              }
+                            }}
+                            title={`Jump to ${rel.otherNode?.label || `Memory #${rel.otherMemoryId}`}`}
+                          >
+                            {rel.otherNode?.label || `Memory #${rel.otherMemoryId}`}
+                          </button>
+                          <div className="inspector-relation-actions">
+                            {rel.otherNode && (
+                              <button
+                                type="button"
+                                className="inspector-mini-btn"
+                                onClick={() => {
+                                  setSelectedNode(rel.otherNode!);
+                                  focusNodeIn3D(rel.otherNode!);
+                                }}
+                                title="Focus in 3D Graph"
+                              >
+                                🎯 Focus
+                              </button>
+                            )}
+                            <Link
+                              href={`/memory/${rel.otherMemoryId}`}
+                              className="inspector-mini-btn"
+                              title="Open memory detail page"
+                            >
+                              View ↗
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
 
             {/* Connected Neighbors Links */}

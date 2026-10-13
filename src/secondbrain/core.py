@@ -166,6 +166,51 @@ class Brain:
             return existing["id"] if existing else mid
         return mid
 
+    def update(self, mid, title=None, content=None, type=None, tags=None, files=None, project=None):
+        mem = self.show(mid)
+        if not mem:
+            return None
+        updates = []
+        args = []
+        if title is not None:
+            updates.append("title = ?")
+            args.append(title.strip())
+        if content is not None:
+            updates.append("content = ?")
+            args.append(redact(content))
+        if type is not None:
+            updates.append("type = ?")
+            args.append(type.strip())
+        if tags is not None:
+            cleaned_tags = sorted(set(t.strip() for t in tags if t and t.strip()))
+            updates.append("tags = ?")
+            args.append(_dumps(cleaned_tags))
+        if files is not None:
+            updates.append("files = ?")
+            args.append(_dumps(files))
+        if project is not None:
+            pid = self._project_id(project.strip())
+            updates.append("project_id = ?")
+            args.append(pid)
+        if not updates:
+            return mem
+        args.append(mid)
+        self.conn.execute(
+            f"UPDATE memories SET {', '.join(updates)} WHERE id = ?",
+            args
+        )
+        self.conn.commit()
+        return self.show(mid)
+
+    def delete(self, mid):
+        row = self.conn.execute("SELECT id FROM memories WHERE id = ?", (mid,)).fetchone()
+        if not row:
+            return False
+        self.conn.execute("DELETE FROM relations WHERE from_id = ? OR to_id = ?", (mid, mid))
+        self.conn.execute("DELETE FROM memories WHERE id = ?", (mid,))
+        self.conn.commit()
+        return True
+
     # ---------- query ----------
 
     def show(self, mid):
