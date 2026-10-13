@@ -1213,6 +1213,13 @@ export default function GraphCanvas({ nodes, links, project }: Props) {
                 >
                   Open Page ↗
                 </Link>
+              ) : selectedNode.type === "memory" && selectedNode.memory ? (
+                <Link
+                  className="inspector-action-btn"
+                  href={`/memory/${selectedNode.memory.id}`}
+                >
+                  View Details ↗
+                </Link>
               ) : selectedNode.project ? (
                 <Link
                   className="inspector-action-btn"

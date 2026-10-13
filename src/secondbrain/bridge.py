@@ -37,6 +37,8 @@ def main():
                 add({"id": tag_id, "label": tag, "type": "tag"})
                 links.append({"source": memory_id, "target": tag_id, "kind": "tagged"})
         result = {"nodes": nodes, "links": links}
+    elif action == "memory":
+        result = brain.show(request.get("id"))
     else:
         raise ValueError(f"unknown action: {action}")
     print(json.dumps(result, ensure_ascii=False))

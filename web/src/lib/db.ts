@@ -30,8 +30,10 @@ export type GraphNode = {
 };
 
 export type GraphLink = { source: string; target: string; kind: string };
+export type MemoryRelation = { from_id: string; to_id: string; kind: string };
+export type MemoryDetail = Memory & { relations?: MemoryRelation[] };
 
-export type BridgeAction = "memories" | "projects" | "stats" | "graph";
+export type BridgeAction = "memories" | "projects" | "stats" | "graph" | "memory";
 
 const python = process.env.SECONDBRAIN_PYTHON ?? "/usr/bin/python3";
 
@@ -80,6 +82,10 @@ export function getStats() {
 
 export function getGraph(): { nodes: GraphNode[]; links: GraphLink[] } {
   return runBridge<{ nodes: GraphNode[]; links: GraphLink[] }>("graph");
+}
+
+export function getMemory(id: string): MemoryDetail | null {
+  return runBridge<MemoryDetail | null>("memory", { id });
 }
 
 export function getDatabasePath() {

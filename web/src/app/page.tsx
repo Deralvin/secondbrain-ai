@@ -33,10 +33,10 @@ export default function DashboardPage() {
         <div className="card">
           <div className="card-title"><h2>Recent memories</h2><span>Latest captured work</span></div>
           {memories.length === 0 ? <p className="empty">Belum ada memory. Jalankan <code>secondbrain auto-capture --agent hermes</code> dari project kerja.</p> : memories.map((memory) => (
-            <article className="memory" key={memory.id}>
+            <Link className="memory" key={memory.id} href={`/memory/${memory.id}`}>
               <div className="memory-title">{memory.title}</div>
               <div className="memory-meta"><span className="pill">{memory.project}</span><span>{memory.type}</span><span>{memory.agent ?? "manual"}</span><span>{formatDate(memory.created_at)}</span></div>
-            </article>
+            </Link>
           ))}
         </div>
 

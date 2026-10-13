@@ -91,7 +91,7 @@ export default async function ProjectPage({ params }: Props) {
             </p>
           ) : (
             memories.map((memory) => (
-              <article className="memory" key={memory.id}>
+              <Link className="memory" key={memory.id} href={`/memory/${memory.id}`}>
                 <div className="memory-title">{memory.title}</div>
                 <div className="memory-meta">
                   <span className="pill">{memory.type}</span>
@@ -107,7 +107,7 @@ export default async function ProjectPage({ params }: Props) {
                     ))}
                   </div>
                 )}
-              </article>
+              </Link>
             ))
           )}
         </div>
